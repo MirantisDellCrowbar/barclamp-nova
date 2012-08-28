@@ -52,6 +52,10 @@ if node[:nova][:network][:ha_enabled]
   include_recipe "nova::network"
 end
 
+if node[:nova][:use_ovs]
+  include_recipe "nova::ovs"
+end
+
 template "/etc/nova/nova-compute.conf" do
   source "nova-compute.conf.erb"
   owner "root"

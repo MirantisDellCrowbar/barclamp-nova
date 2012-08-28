@@ -6,6 +6,8 @@
       "keystone_instance": "none",
       "service_user": "nova",
       "glance_instance": "none",
+      "ovs_network": "ovs_data",
+      "use_ovs": true,
       "libvirt_type": "kvm",
       "use_novnc": true,
       "verbose": true,

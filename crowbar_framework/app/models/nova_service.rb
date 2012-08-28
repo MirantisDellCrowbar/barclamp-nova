@@ -147,6 +147,13 @@ class NovaService < ServiceObject
       end
     end
 
+    if role.default_attributes["nova"]["use_ovs"]
+      compute_nodes = role.override_attributes["nova"]["elements"]["nova-multi-compute"]
+      compute_nodes.each do |n|
+        net_svc.allocate_ip "default", role.default_attributes["nova"]["ovs_network"], "host", n
+      end
+    end
+
     @logger.debug("Nova apply_role_pre_chef_call: leaving")
   end
 

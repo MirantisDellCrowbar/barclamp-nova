@@ -7,8 +7,10 @@ dhcpbridge=/usr/bin/nova-dhcpbridge
 logdir=/var/log/nova
 state_path=/var/lib/nova
 lock_path=/var/lock/nova
+<% if node[:platform] != "suse" %>
 use_syslog=True
 root_helper=sudo nova-rootwrap
+<% end -%>
 
 
 # RABBITMQ
@@ -53,13 +55,11 @@ vlan_start=<%= node[:nova][:network][:vlan_start] %>
 network_manager=nova.network.manager.FlatDHCPManager
 flat_network_dns=<%= @dns_server_public_ip %>
 flat_network_dhcp_start=<%= node[:nova][:network][:flat_network_dhcp_start] %>
-flat_interface=<%= node[:nova][:network][:flat_interface] %>
 flat_network_bridge=<%= node[:nova][:network][:flat_network_bridge] %>
 <% end -%>
 <% else -%>
 # Flat Mode
 network_manager=nova.network.manager.FlatManager
-flat_interface=<%= node[:nova][:network][:flat_interface] %>
 flat_network_bridge=<%= node[:nova][:network][:flat_network_bridge] %>
 flat_network_dns=<%= @dns_server_public_ip %>
 flat_injected=True
@@ -76,6 +76,9 @@ glance_api_servers=<%= @glance_server_ip %>:<%= @glance_server_port %>
 sql_connection=<%= @sql_connection %>
 <% end -%>
 connection_type=libvirt
+<% if node[:platform] == "suse" %>
+libvirt_type=<%= @libvirt_type %>
+<% end -%>
 firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
 compute_manager=nova.compute.manager.ComputeManager
 instance_name_template=instance-%08x
@@ -102,3 +105,12 @@ auth_strategy=keystone
 volume_group=<%= node[:nova][:volume][:volume_name] %>
 volume_name_template=volume-%08x
 iscsi_helper=tgtadm
+
+# OVS
+<% if node[:nova][:use_ovs] -%>
+linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
+linuxnet_ovs_integration_bridge=br-int
+libvirt_ovs_bridge=br-int
+libvirt_vif_type=ethernet
+libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtOpenVswitchDriver
+<% end -%>

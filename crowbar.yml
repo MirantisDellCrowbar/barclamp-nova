@@ -122,4 +122,6 @@ debs:
     - python-eventlet
     - bzr
     - mysql-client
+    - openvswitch-datapath-dkms
+    - openvswitch-switch
 
