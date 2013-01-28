@@ -25,7 +25,6 @@ barclamp:
     - glance
     - keystone
     - nova_dashboard
-    - cinder
   member:
     - openstack 
 
