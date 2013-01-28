@@ -70,7 +70,7 @@ elsif node[:nova][:volume][:volume_type] == "eqlx"
   # do nothing on the host
 else
   raw_mode = node[:nova][:volume][:nova_raw_method]
-  raw_list = node[:nova][:volume][:nova_volume_disks]
+  raw_list = node[:nova][:volume][:nova_volume_disks][node[:fqdn]]
   # if all, then just use the checked_list
   raw_list = checked_disks if raw_mode == "all"
 

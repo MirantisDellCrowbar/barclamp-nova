@@ -1,4 +1,3 @@
-
 %input#proposal_attributes{:type => "hidden", :name => "proposal_attributes", :value => @proposal.raw_data['attributes'][@proposal.barclamp].to_json}
 %p
   %label{:for => "proposal_attributes"}= t('.attributes')
@@ -52,6 +51,12 @@
     %p
       %label{ :for => :volume_header }= t('.volume_header')
     %div.container
+      %p
+        %label{ :for => :use_cinder }= t('.use_cinder')
+        = select_tag :use_cinder, options_for_select([['true','true'], ['false', 'false']], @proposal.raw_data['attributes'][@proposal.barclamp]["volume"]["use_cinder"].to_s), :onchange => "update_view();update_value('volume/use_cinder', 'use_cinder', 'boolean')"
+      %p
+        %label{ :for => :cinder_instance }= t('.cinder_instance')
+        = instance_selector("cinder", :cinder_instance, "cinder_instance", @proposal)
       %p
         %label{ :for => :volume_name }= t('.volume_name')
         %input#volume_name{:type => "text", :name => "volume_name", :'data-default' => @proposal.raw_data['attributes'][@proposal.barclamp]["volume"]["volume_name"], :onchange => "update_value('volume/volume_name','volume_name', 'string')"}
@@ -133,40 +138,41 @@
     proposal_input.val(JSON.stringify(proposal_data));
   }
 
-  function make_disk_list(data, node){
-    $(volume_disk_list_path).empty();
+  function make_disk_list(data, noode, currentnode){
     if ($.isEmptyObject(data)){
       i18n_msg('warning', node, volume_role, 'It has no suitable disk for nova-volume storage. '
                                            + 'If applyed, regular file will be used for volume group');
     }
-    $.each(node) {
-      $.each(data, function(disk, size){
-        var li = document.createElement('li');
-        var inp = document.createElement('input');
-        var label = document.createTextNode(disk + ", size: " + size + " sectors");
-        inp.type = "checkbox";
-        inp.name = disk;
-        inp.value = disk;
-        inp.onclick = update_nova_disks;
-        li.appendChild(inp);
-        li.appendChild(label);
-        $(volume_disk_list_path).append(li);
-      });
-    }
+    $.each(data, function(disk, size){
+      var li = document.createElement('li');
+      var inp = document.createElement('input');
+      var label = document.createTextNode(disk + ", size: " + size + " sectors at " + currentnode);
+      inp.type = "checkbox";
+      inp.name = disk;
+      inp.value = disk;
+      inp.onclick = update_nova_disks;
+      li.appendChild(inp);
+      li.appendChild(label);
+      $(volume_disk_list_path).append(li);
+    });
     update_nova_disks();
   }
 
   function on_role_change(callback, param) {
-    var node = $('li', volume_path).attr('id');
-    if (node) {
-      $.getJSON('/nova/node_disks?id=' + node,
+    var nodes = [];
+    $('li', volume_path).each(function() { nodes.push($(this).attr('id'));});
+    $(volume_disk_list_path).empty();
+    $.each (nodes,function() {
+     var currentnode = this; 
+      $.getJSON('/nova/node_disks?id=' + this,
         function(data){
-          make_disk_list(data, node);
+          console.log(this);
+          make_disk_list(data, this, currentnode);
           if (callback){
             callback(param);
           }
         });
-    }
+    });
   }
 
   function check_disks_loaded_from_proposal(disks){
@@ -232,4 +238,4 @@
     }
 
     load_proposal_disk_attrs();
-  }, 0);
+  }, 0)xy;
