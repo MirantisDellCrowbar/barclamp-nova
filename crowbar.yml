@@ -109,6 +109,31 @@ debs:
       # paramiko needed for using EQL with nova-volume
       - python-paramiko
       - python-cinderclient
+  ubuntu-12.10:
+    repos:
+      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu quantal-updates/folsom main
+      - deb http://ubuntu-cloud.archive.canonical.com/ubuntu quantal-proposed/folsom main
+    pkgs:
+      - tgt
+      - novnc
+      - nova-compute-lxc
+      - nova-compute-xen
+      - nova-compute-xcp
+      - nova-compute-kvm
+      - nova-compute-uml
+      - nova-compute-qemu
+      - nova-api-os-compute
+      - nova-api-os-volume
+      - nova-api-ec2
+      - nova-api-metadata
+      - nova-doc
+      - nova-console
+      - nova-xcp-network
+      - python-numpy
+      - nova-consoleauth
+      # paramiko needed for using EQL with nova-volume
+      - python-paramiko
+      - python-cinderclient
   pkgs:
     - euca2ools
     - unzip
