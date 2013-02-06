@@ -19,14 +19,20 @@ class NovaController < BarclampController
   end
   
   def node_disks
-    disk_list = {}
     name = params[:id] || params[:name]
     node = NodeObject.find_node_by_name(name)
+
+    result = {
+        "node" => name,
+        "alias" => node["crowbar"]["display"]["alias"],
+        "disks" => {}
+    }
+
     node["crowbar"]["disks"].each do | disk, data |
-      disk_list[node][disk] = data["size"] if data["usage"] == "Storage"
+      result["disks"][disk] = data["size"] if data["usage"] == "Storage"
     end
-    Rails.logger.info "disk list #{disk_list.inspect}"
-    render :json => JSON.generate(disk_list)
+    Rails.logger.info "disk list #{result.inspect}"
+    render :json => JSON.generate(result)
   end
 end
 
