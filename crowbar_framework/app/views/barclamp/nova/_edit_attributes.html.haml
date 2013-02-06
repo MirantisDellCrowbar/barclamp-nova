@@ -141,28 +141,29 @@
                                            + 'If applyed, regular file will be used for volume group');
     };
     $.each(disks, function(disk, size){
-      $(volume_disk_list_path).append(
-        $("<li>")
-          .append(
-            $("<input>")
-              .attr('type', 'checkbox')
-              .attr('name', "disks["+node+"]["+disk+"]")
-              .attr('node', node)
-              .attr('disk', disk)
-              .attr('onClick',"update_nova_disks()")
-          )
-          .append(
-            $("<label>")
-              .html(disk + ", size: " + size + " sectors [" + alias + "]")
-          )
-      );
+      if ($('input[node="'+node+'"][disk="'+disk+'"]').length == 0) {
+        $(volume_disk_list_path).append(
+          $("<li>")
+            .append(
+              $("<input>")
+                .attr('type', 'checkbox')
+                .attr('name', "disks["+node+"]["+disk+"]")
+                .attr('node', node)
+                .attr('disk', disk)
+                .attr('onClick',"update_nova_disks()")
+            )
+            .append(
+              $("<label>")
+                .html(disk + ", size: " + size + " sectors [" + alias + "]")
+            )
+        );
+      }
     });
   }
 
   function on_role_change(callback, param) {
     var nodes = [];
     $('li', volume_path).each(function() { nodes.push($(this).attr('id')); });
-    $(volume_disk_list_path).empty();
     $.each (nodes,function() {
       var node = this.toString();
       $.getJSON(
@@ -209,6 +210,7 @@
 
   $(document).ready(function(){
     update_view();
+    load_proposal_disk_attrs();
   });
 
   // HACK HACK HACK
@@ -218,9 +220,10 @@
     messages['warning'] = 'Warning: Avoid using Node [0] to Role [1]. [2]';
     messages['no_disks_checked'] = 'Warning: If no one of disks from the list are checked, '
                                  + 'will use any suitable disk from it for the volume group';
-  
+
     var org_drop_item = this.drop_item;
     var org_remove_item = this.remove_item;
+
     this.drop_item = function(name, list) {
             var vall = org_drop_item(name, list);
             if (vall && list == volume_role) {
@@ -232,11 +235,11 @@
     this.remove_item = function(name, list) {
             var vall = org_remove_item(name, list);
             if (list == volume_role) {
-              $(volume_disk_list_path).empty();
-              update_nova_disks();
+              $('li input[node="'+name+'"]', volume_disk_list_path).parent().remove();
+              update_cinder_disks();
             }
             return vall;
     }
 
-    load_proposal_disk_attrs();
   }, 0);
+
