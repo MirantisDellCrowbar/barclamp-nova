@@ -172,6 +172,20 @@ else
   eqlx_params = nil
 end
 
+oat_servers = search(:node, "roles:oat-server") || []
+if oat_servers.length > 0
+  oat_server = oat_servers[0]
+  execute "fill_cert" do
+    command <<-EOF
+      echo | openssl s_client -connect "#{oat_server[:hostname]}:8443" -cipher DHE-RSA-AES256-SHA > /etc/nova/oat_certfile.cer
+    EOF
+    not_if { File.exists? "/etc/nova/oat_certfile.cer" }
+  end
+else
+  oat_server = node
+end
+
+
 template "/etc/nova/nova.conf" do
   source "nova.conf.erb"
   owner node[:nova][:user]
@@ -186,7 +200,9 @@ template "/etc/nova/nova.conf" do
             :glance_server_ip => glance_server_ip,
             :glance_server_port => glance_server_port,
             :vncproxy_public_ip => vncproxy_public_ip,
-            :eqlx_params => eqlx_params
+            :eqlx_params => eqlx_params,
+            :oat_appraiser_host => oat_server[:hostname],
+            :oat_appraiser_port => "8443"
             )
 end
 
