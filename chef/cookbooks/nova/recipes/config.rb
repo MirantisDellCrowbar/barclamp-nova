@@ -177,7 +177,7 @@ if oat_servers.length > 0
   oat_server = oat_servers[0]
   execute "fill_cert" do
     command <<-EOF
-      echo | openssl s_client -connect "#{oat_server[:hostname]}:8443" -cipher DHE-RSA-AES256-SHA > /etc/nova/oat_certfile.cer
+      echo | openssl s_client -connect "#{oat_server[:hostname]}:8443" -cipher DHE-RSA-AES256-SHA > /etc/nova/oat_certfile.cer || rm -fv /etc/nova/oat_certfile.cer
     EOF
     not_if { File.exists? "/etc/nova/oat_certfile.cer" }
   end
