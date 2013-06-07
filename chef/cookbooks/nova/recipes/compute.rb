@@ -26,8 +26,7 @@ venv_path = node[:nova][:use_virtualenv] ? "#{nova_path}/.venv" : nil
 include_recipe "nova::quantum"
 
 include_recipe "nova::config"
-
-package "mysql-client"
+include_recipe "database::client"
 
 nova_package "compute" do
   virtualenv venv_path

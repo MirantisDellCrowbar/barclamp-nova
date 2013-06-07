@@ -26,7 +26,7 @@ class NovaService < ServiceObject
 
   def proposal_dependencies(role)
     answer = []
-    answer << { "barclamp" => "mysql", "inst" => role.default_attributes["nova"]["db"]["mysql_instance"] }
+    answer << { "barclamp" => "database", "inst" => role.default_attributes["nova"]["db"]["database_instance"] }
     answer << { "barclamp" => "keystone", "inst" => role.default_attributes["nova"]["keystone_instance"] }
     answer << { "barclamp" => "glance", "inst" => role.default_attributes["nova"]["glance_instance"] }
     answer << { "barclamp" => "rabbitmq", "inst" => role.default_attributes["nova"]["rabbitmq_instance"] }
@@ -35,6 +35,9 @@ class NovaService < ServiceObject
     end
     if role.default_attributes[@bc_name]["volume"]["use_cinder"]
       answer << { "barclamp" => "cinder", "inst" => role.default_attributes[@bc_name]["cinder_instance"] }
+    end
+    if role.default_attributes[@bc_name]["networking_backend"] == "quantum"
+      answer << { "barclamp" => "quantum", "inst" => role.default_attributes[@bc_name]["quantum_instance"] }
     end
     answer
   end
@@ -67,7 +70,6 @@ class NovaService < ServiceObject
     nodes = [ head ] if nodes.empty?
     base["deployment"]["nova"]["elements"] = {
       "nova-multi-controller" => [ head.name ],
-      "nova-multi-volume" => [ head.name ],
       "nova-multi-compute" => nodes.map { |x| x.name }
     }
     # automatically swap to qemu if using VMs for testing (relies on node.virtual to detect VMs)
@@ -93,17 +95,25 @@ class NovaService < ServiceObject
       @logger.info("#{@bc_name} create_proposal: no git found")
     end
 
-    base["attributes"]["nova"]["db"]["mysql_instance"] = ""
+    base["attributes"]["nova"]["db"]["database_instance"] = ""
     begin
-      mysqlService = MysqlService.new(@logger)
-      mysqls = mysqlService.list_active[1]
-      if mysqls.empty?
+      databaseService = DatabaseService.new(@logger)
+      dbs = databaseService.list_active[1]
+      if dbs.empty?
         # No actives, look for proposals
-        mysqls = mysqlService.proposals[1]
+        dbs = databaseService.proposals[1]
       end
-      base["attributes"]["nova"]["db"]["mysql_instance"] = mysqls[0] unless mysqls.empty?
+      if dbs.empty?
+        @logger.info("Nova create_proposal: no database proposal found")
+      else
+        base["attributes"]["nova"]["db"]["database_instance"] = dbs[0]
+      end
     rescue
-      @logger.info("Nova create_proposal: no mysql found")
+      @logger.info("Nova create_proposal: no database found")
+    end
+
+    if base["attributes"]["nova"]["db"]["database_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "database"))
     end
 
     base["attributes"]["nova"]["rabbitmq_instance"] = ""
@@ -119,6 +129,10 @@ class NovaService < ServiceObject
       @logger.info("Nova create_proposal: no rabbitmq found")
     end
 
+    if base["attributes"]["nova"]["rabbitmq_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "rabbitmq"))
+    end
+
     base["attributes"]["nova"]["keystone_instance"] = ""
     begin
       keystoneService = KeystoneService.new(@logger)
@@ -131,6 +145,11 @@ class NovaService < ServiceObject
     rescue
       @logger.info("Nova create_proposal: no keystone found")
     end
+
+    if base["attributes"]["nova"]["keystone_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "keystone"))
+    end
+
     base["attributes"]["nova"]["service_password"] = '%012d' % rand(1e12)
 
     base["attributes"]["nova"]["glance_instance"] = ""
@@ -146,6 +165,10 @@ class NovaService < ServiceObject
       @logger.info("Nova create_proposal: no glance found")
     end
 
+    if base["attributes"]["nova"]["glance_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "glance"))
+    end
+
     base["attributes"]["nova"]["cinder_instance"] = ""
     begin
       cinderService = CinderService.new(@logger)
@@ -157,6 +180,27 @@ class NovaService < ServiceObject
       base["attributes"]["nova"]["cinder_instance"] = cinders[0] unless cinders.empty?
     rescue
       @logger.info("Nova create_proposal: no cinder found")
+    end
+
+    if base["attributes"]["nova"]["cinder_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "cinder"))
+    end
+
+    base["attributes"]["nova"]["quantum_instance"] = ""
+    begin
+      quantumService = QuantumService.new(@logger)
+      quantums = quantumService.list_active[1]
+      if quantums.empty?
+        # No actives, look for proposals
+        quantums = quantumService.proposals[1]
+      end
+      base["attributes"]["nova"]["quantum_instance"] = quantums[0] unless quantums.empty?
+    rescue
+      @logger.info("Nova create_proposal: no quantum found")
+    end
+
+    if base["attributes"]["nova"]["quantum_instance"] == ""
+      raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "quantum"))
     end
 
     base["attributes"]["nova"]["db"]["password"] = random_password
@@ -177,30 +221,35 @@ class NovaService < ServiceObject
     # if tenants are enabled, we don't manage interfaces on nova-fixed.
     #
     net_svc = NetworkService.new @logger
-
     tnodes = role.override_attributes["nova"]["elements"]["nova-multi-controller"]
-    tnodes = all_nodes if role.default_attributes["nova"]["network"]["ha_enabled"]
-    unless tnodes.nil? or tnodes.empty?
+    if role.default_attributes["nova"]["networking_backend"]=="quantum"
       tnodes.each do |n|
-        if role.default_attributes["nova"]["networking_backend"]=="nova-network"
+        net_svc.allocate_ip "default","public","host",n
+      end unless tnodes.nil?
+      quantum = ProposalObject.find_proposal("quantum",role.default_attributes["nova"]["quantum_instance"])
+      all_nodes.each do |n|
+        if quantum["attributes"]["quantum"]["networking_mode"] == "gre"
+          net_svc.allocate_ip "default", "os_sdn", "host", n
+        else
+          net_svc.enable_interface "default", "nova_fixed", n
+        end
+      end unless all_nodes.nil?
+    else
+      tnodes = all_nodes if role.default_attributes["nova"]["network"]["ha_enabled"]
+      unless tnodes.nil? or tnodes.empty?
+        tnodes.each do |n|
           net_svc.allocate_ip "default", "public", "host", n
-          unless role.default_attributes["nova"]["network"]["tenant_vlans"] # or role.default_attributes["nova"]["networking_backend"]=="quantum"
+          unless role.default_attributes["nova"]["network"]["tenant_vlans"]
             net_svc.allocate_ip "default", "nova_fixed", "router", n
           end
         end
-        if role.default_attributes["nova"]["networking_backend"]=="quantum"
+      end
+      unless role.default_attributes["nova"]["network"]["tenant_vlans"]
+        all_nodes.each do |n|
           net_svc.enable_interface "default", "nova_fixed", n
-          net_svc.allocate_ip "default", "public", "host", n
         end
       end
     end
-
-    unless role.default_attributes["nova"]["network"]["tenant_vlans"] or role.default_attributes["nova"]["networking_backend"]=="quantum"
-      all_nodes.each do |n|
-        net_svc.enable_interface "default", "nova_fixed", n
-      end
-    end
-
     @logger.debug("Nova apply_role_pre_chef_call: leaving")
   end
 
