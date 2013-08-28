@@ -1086,6 +1086,10 @@ dhcpbridge=<%= @dhcpbridge %>
 linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
 <% elsif @quantum_networking_plugin == "linuxbridge" -%>
 linuxnet_interface_driver=nova.network.linux_net.LinuxBridgeInterfaceDriver
+<% elsif @quantum_networking_plugin == "mellanox" -%>
+libvirt_vif_driver=nova.virt.libvirt.mlnx.vif.MlxEthVIFDriver
+vnic_type=direct
+fabric=default
 <% end -%>
 <% end -%>
 
