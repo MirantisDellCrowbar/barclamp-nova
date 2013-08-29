@@ -35,7 +35,7 @@ unless node[:nova][:use_gitrepo]
   end
 
   # nova.conf.erb has notification_driver=ceilometer.compute.nova_notifier, thus:
-  package "python-ceilometerclient"
+  package "python-ceilometer"
 else
   pfs_and_install_deps "nova" do
     virtualenv venv_path
@@ -190,14 +190,12 @@ node.set[:nova][:network][:floating_range] = "#{nova_floating["subnet"]}/#{mask_
 fip = Chef::Recipe::Barclamp::Inventory.get_network_by_type(node, "nova_fixed")
 if fip
   fixed_interface = fip.interface
-  fixed_interface = "#{fip.interface}.#{fip.vlan}" if fip.use_vlan
 else
   fixed_interface = nil
 end
 pip = Chef::Recipe::Barclamp::Inventory.get_network_by_type(node, "public")
 if pip
   public_interface = pip.interface
-  public_interface = "#{pip.interface}.#{pip.vlan}" if pip.use_vlan
 else
   public_interface = nil
 end
