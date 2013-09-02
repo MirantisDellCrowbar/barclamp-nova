@@ -213,49 +213,41 @@ class NovaService < ServiceObject
     base
   end
 
+  ## TODO: Need move this commented to nova_service.rb
   def apply_role_pre_chef_call(old_role, role, all_nodes)
     @logger.debug("Nova apply_role_pre_chef_call: entering #{all_nodes.inspect}")
     return if all_nodes.empty?
 
-    # Handle addressing
-    #
-    # Make sure that the front-end pieces have public ip addreses.
-    #   - if we are in HA mode, then that is all nodes.
-    #
-    # if tenants are enabled, we don't manage interfaces on nova-fixed.
-    #
     net_svc = NetworkService.new @logger
-    tnodes = role.override_attributes["nova"]["elements"]["nova-multi-controller"]
-    if role.default_attributes["nova"]["networking_backend"]=="quantum"
+    network_proposal = ProposalObject.find_proposal(net_svc.bc_name, "default")
+    if network_proposal["attributes"]["network"]["networks"]["os_sdn"].nil?
+      raise I18n.t("barclamp.quantum.deploy.missing_os_sdn_network")
+    end
+
+
+    tnodes = []
+    role.override_attributes["nova"]["elements"].each do |name,nodes|
+      tnodes += nodes if name.start_with? "nova-multi-compute-"
+    end
+
+    quantum = ProposalObject.find_proposal("quantum",role.default_attributes["nova"]["quantum_instance"])
+    puts quantum.inspect
+    puts quantum[:quantum].inspect
+
+    unless tnodes.nil? or tnodes.empty?
       tnodes.each do |n|
-        net_svc.allocate_ip "default","public","host",n
-      end unless tnodes.nil?
-      quantum = ProposalObject.find_proposal("quantum",role.default_attributes["nova"]["quantum_instance"])
-      all_nodes.each do |n|
-        if quantum["attributes"]["quantum"]["networking_mode"] == "gre"
-          net_svc.allocate_ip "default", "os_sdn", "host", n
+        net_svc.allocate_ip "default", "public", "host",n
+
+        if quantum[:attributes][:quantum]["networking_mode"] == "gre"
+          net_svc.allocate_ip "default","os_sdn","host", n
         else
-          net_svc.enable_interface "default", "nova_fixed", n
-        end
-      end unless all_nodes.nil?
-    else
-      tnodes = all_nodes if role.default_attributes["nova"]["network"]["ha_enabled"]
-      unless tnodes.nil? or tnodes.empty?
-        tnodes.each do |n|
-          net_svc.allocate_ip "default", "public", "host", n
-          unless role.default_attributes["nova"]["network"]["tenant_vlans"]
-            net_svc.allocate_ip "default", "nova_fixed", "router", n
-          end
-        end
-      end
-      unless role.default_attributes["nova"]["network"]["tenant_vlans"]
-        all_nodes.each do |n|
           net_svc.enable_interface "default", "nova_fixed", n
         end
       end
     end
     @logger.debug("Nova apply_role_pre_chef_call: leaving")
   end
+
 
   def validate_proposal_after_save proposal
     super

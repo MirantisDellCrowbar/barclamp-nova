@@ -14,5 +14,5 @@
 #
 
 node.set[:cookbook] = cookbook_name
-include_recipe "quantum::common_install"
+include_recipe "quantum::agents"
 node.delete(:cookbook)
