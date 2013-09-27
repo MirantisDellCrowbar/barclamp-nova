@@ -162,6 +162,10 @@ rpms:
     - kvm
     - lxc
 
+pips:
+  - cliff<=1.4.3
+  - cmd2<=0.6.5.1
+
 git_repo:
   - nova https://github.com/openstack/nova.git stable/grizzly
   - novnc https://github.com/kanaka/noVNC.git master
