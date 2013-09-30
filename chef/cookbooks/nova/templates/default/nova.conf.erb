@@ -1289,7 +1289,13 @@ quantum_api_insecure=<%= @quantum_insecure ? 'True' : 'False' %>
 #
 
 # The full class name of the security API class (string value)
-<% if node[:nova][:networking_backend] == "quantum" %>security_group_api=quantum<% end %>
+<% if node[:nova][:networking_backend] == "quantum" %>
+<% if @quantum_networking_plugin == "mellanox" -%>
+security_group_api=nova
+<% else -%>
+security_group_api=quantum
+<% end %>
+<% end %>
 
 # The full class name of the security group handler class
 # (string value)
