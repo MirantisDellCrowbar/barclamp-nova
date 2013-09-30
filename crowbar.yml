@@ -163,5 +163,5 @@ rpms:
     - lxc
 
 git_repo:
-  - nova https://github.com/openstack/nova.git 2013.2.b2
+  - nova https://github.com/openstack/nova.git 2013.2.b3
   - novnc https://github.com/kanaka/noVNC.git master
