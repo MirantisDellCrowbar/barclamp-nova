@@ -659,7 +659,6 @@ else
    echo -e "\n\nTest set for instances booted from volume created from glance image  will be skipped due to Cinder Bug #1183283, check comments provided in this script code for details \n\n"
 fi
 # Cinder Bug #1183283  workaround end
-fi
 
 # Need to test full network connectivity, Cinder, and instance interconnectivity.
 
