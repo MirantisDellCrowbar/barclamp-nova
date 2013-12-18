@@ -201,7 +201,7 @@ for instance_name in "${instances[@]}"; do
     echo "$instance_name at fixed IP ${BASH_REMATCH[1]}"
     fixed_ips[$instance_name]=${BASH_REMATCH[1]}
     echo "Allocating a floating IP"
-    [[ $(neutron floating-ip-create floating --tenant_id ${OS_TENANT_ID}) =~ $ip_re ]] || \
+    [[ $(neutron floatingip-create floating --tenant_id ${OS_TENANT_ID}) =~ $ip_re ]] || \
         die 1 "Could not allocate floating IP for $instance_name"
     floating_ips[$instance_name]=${BASH_REMATCH[1]}
     nova add-floating-ip "$instance_name" "${BASH_REMATCH[1]}" || \
