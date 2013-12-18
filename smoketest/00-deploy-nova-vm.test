@@ -77,6 +77,7 @@ export OS_AUTH_URL="http://$keystone_ip:5000/v2.0"
 export OS_USERNAME="admin"
 export OS_PASSWORD="crowbar"
 export OS_TENANT_NAME="admin"
+export OS_TENANT_ID=$(keystone tenant-list | grep ${OS_TENANT_NAME} | awk '{print $2;}')
 
 
 echo -e "Flushing floating ip list..."
@@ -139,12 +140,12 @@ fi
 
 
 echo "Adding our security group"
-neutron security-group-create smoketest
-neutron security-group-rule-create --protocol icmp --direction ingress smoketest
+neutron security-group-create smoketest --tenant_id ${OS_TENANT_ID}
+neutron security-group-rule-create --protocol icmp --direction ingress smoketest --tenant_id ${OS_TENANT_ID}
 neutron security-group-rule-create --protocol tcp --port-range-min 1 \
-    --port-range-max 65535 --direction ingress smoketest
+    --port-range-max 65535 --direction ingress smoketest --tenant_id ${OS_TENANT_ID}
 neutron security-group-rule-create --protocol udp --port-range-min 1 \
-    --port-range-max 65535 --direction ingress smoketest
+    --port-range-max 65535 --direction ingress smoketest --tenant_id ${OS_TENANT_ID}
 fixed_net=$(neutron net-list --quote none -F id --format csv -- --name fixed |tail -1 |tr -d '\r')
 
 
@@ -201,7 +202,7 @@ for instance_name in "${instances[@]}"; do
     fi
 
     echo "Allocating a floating IP"
-    [[ $(nova floating-ip-create) =~ $ip_re ]] || \
+    [[ $(neutron floating-ip-create floating --tenant_id ${OS_TENANT_ID}) =~ $ip_re ]] || \
         die 1 "Could not allocate floating IP for $instance_name"
     floating_ips+=(${BASH_REMATCH[1]})
     nova add-floating-ip "$instance_name" "${BASH_REMATCH[1]}" || \
