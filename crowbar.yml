@@ -112,6 +112,8 @@ debs:
       - nova-consoleauth
       # paramiko needed for using EQL with nova-volume
       - python-paramiko
+      # ceph utils
+      - sysfsutils
   pkgs:
     - euca2ools
     - unzip
