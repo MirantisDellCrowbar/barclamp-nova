@@ -434,28 +434,12 @@ if api == node and api[:nova][:novnc][:ssl][:enabled]
   end
 end
 
-cephs = search(:node, "roles:ceph-cinder")
-if cephs.length > 0
-  ceph = cephs[0]
-  Chef::Log.info("found ceph nodes")
-  node.set["ceph"]["cinder-secret"] = ceph['ceph']['cinder-secret']
-else
-  fail("cannot find any ceph nodes")
-end
-
-bash "create virsh secret" do
-  environment = {'CINDER_SECRET' => node["ceph"]["cinder-secret"]}
-  code <<-EOH
-  echo "<secret ephemeral='no' private='no'> \
-  <usage type='ceph'> \
-    <name>client.volumes secret</name> \
-    </usage></secret>" > /tmp/secret.xml
-  export UUID=`virsh secret-define --file /tmp/secret.xml | cut -d' ' -f2`
-  ceph auth get-key client.volumes > /etc/ceph/client.volumes.key
-  virsh secret-set-value --secret ${UUID} --base64 ${CINDER_SECRET}
-  echo ${UUID} > /tmp/virsh_volumes.uuid
-  EOH
-  user "root"
+cinder_controller = search(:node, "roles:cinder-controller")
+rbd_user = ""
+rbd_secret_uuid = ""
+if cinder_controller.length > 0
+  rbd_user = cinder_controller[0][:cinder][:volume][:rbd][:user]
+  rbd_secret_uuid = cinder_controller[0][:cinder][:volume][:rbd][:secret_uuid]
 end
 
 template "/etc/nova/nova.conf" do
