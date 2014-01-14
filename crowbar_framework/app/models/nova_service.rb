@@ -212,6 +212,21 @@ class NovaService < ServiceObject
     base["attributes"]["nova"]["db"]["password"] = random_password
     base["attributes"]["nova"]["neutron_metadata_proxy_shared_secret"] = random_password
 
+    base["attributes"][@bc_name]["ceph_instance"] = ""
+    begin
+      cephService = CephService.new(@logger)
+      cephs = cephService.list_active[1]
+      if cephs.empty?
+        # No actives, look for proposals
+        cephs = cephService.proposals[1]
+      end
+      unless cephs.empty?
+        base["attributes"][@bc_name]["ceph_instance"] = cephs[0]
+      end
+    rescue
+      @logger.info("#{@bc_name} create_proposal: no ceph found")
+    end
+
     @logger.debug("Nova create_proposal: exiting")
     base
   end
@@ -272,6 +287,14 @@ class NovaService < ServiceObject
         end
       end
     end
+
+    # apply ceph-nova role if storage ceph proposals exists
+    unless role.default_attributes[@bc_name]["ceph_instance"].empty?
+      role.run_list << "recipe[nova::monitor]"
+      role.run_list << "role[ceph-nova]"
+      role.save
+    end
+
     @logger.debug("Nova apply_role_pre_chef_call: leaving")
   end
 

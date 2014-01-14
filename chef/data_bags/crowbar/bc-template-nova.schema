@@ -29,6 +29,7 @@
             "use_syslog": { "type": "bool", "required": true },
             "gitrepo": { "type": "str", "required": true },
             "git_instance": { "type": "str", "required": true },
+            "ceph_instance": { "type": "str", "required": true },
             "itxt_instance": { "type": "str", "required": true },
             "git_refspec": { "type": "str", "required": true },
             "networking_backend": { "type": "str", "required": true },
