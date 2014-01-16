@@ -209,6 +209,19 @@ class NovaService < ServiceObject
       raise(I18n.t('model.service.dependency_missing', :name => @bc_name, :dependson => "neutron"))
     end
 
+    base["attributes"]["nova"]["ceph_instance"] = ""
+    begin
+      cephService = CephService.new(@logger)
+      cephs = cephService.list_active[1]
+      if ceph.empty?
+        # No actives, look for proposals
+        cephs = cephsService.proposals[1]
+      end
+      base["attributes"][@bc_name]["ceph_instance"] = cephs[0] unless cephs.empty?
+    rescue
+      @logger.info("Nova create_proposal: no ceph found")
+    end
+
     base["attributes"]["nova"]["db"]["password"] = random_password
     base["attributes"]["nova"]["neutron_metadata_proxy_shared_secret"] = random_password
 
@@ -272,6 +285,25 @@ class NovaService < ServiceObject
         end
       end
     end
+
+    # configure ceph params for computes
+    # if cinder use ceph as backend
+    cinder = ProposalObject.find_proposal("cinder",role.default_attributes["nova"]["cinder_instance"])
+    if cinder["attributes"]["cinder"]["volume"]["volume_type"] == "rbd"
+      comps  = role.elements["nova-multi-compute-kvm"]
+      comps += role.elements["nova-multi-compute-qemu"]
+      comps.each do |comp|
+        node = NodeObject.find_nodes_by_name(comp)
+        unless node.empty?
+          @logger.info("add ceph role to compute node #{comp}")
+          node[0].add_to_run_list("ceph-nova",100)
+          node[0].save
+        else
+          @logger.error("can't find node object for #{comp}")
+        end
+      end
+    end
+
     @logger.debug("Nova apply_role_pre_chef_call: leaving")
   end
 

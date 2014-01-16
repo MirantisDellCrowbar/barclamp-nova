@@ -27,6 +27,7 @@
             "use_migration": { "type": "bool", "required": true },
             "use_shared_instance_storage": { "type": "bool", "required": true },
             "use_syslog": { "type": "bool", "required": true },
+            "ceph_instance": { "type": "str", "required": true },
             "gitrepo": { "type": "str", "required": true },
             "git_instance": { "type": "str", "required": true },
             "itxt_instance": { "type": "str", "required": true },

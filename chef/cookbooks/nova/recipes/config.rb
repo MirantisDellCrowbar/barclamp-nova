@@ -445,6 +445,18 @@ if api == node and api[:nova][:novnc][:ssl][:enabled]
   end
 end
 
+cinder_controller = search(:node, "roles:cinder-controller")
+if cinder_controller.length > 0
+  rbd_params = {
+    :user => cinder_controller[0][:cinder][:volume][:rbd][:user],
+    :pool => cinder_controller[0][:cinder][:volume][:rbd][:pool],
+    :uuid => cinder_controller[0][:cinder][:volume][:rbd][:secret_uuid],
+    :conf => "/etc/ceph/ceph.conf"
+  }
+else
+  rbd_params = nil
+end
+
 template "/etc/nova/nova.conf" do
   source "nova.conf.erb"
   owner node[:nova][:user]
@@ -488,7 +500,8 @@ template "/etc/nova/nova.conf" do
             :ssl_ca_file => api[:nova][:ssl][:ca_certs],
             :oat_appraiser_host => oat_server[:hostname],
             :oat_appraiser_port => "8443",
-            :has_itxt => has_itxt
+            :has_itxt => has_itxt,
+            :rbd_params => rbd_params
             )
 end
 

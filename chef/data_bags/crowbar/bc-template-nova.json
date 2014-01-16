@@ -18,6 +18,7 @@
       "use_shared_instance_storage": false,
       "use_migration": false,
       "use_syslog": false,
+      "ceph_instance": "",
       "gitrepo": "http://github.com/openstack/nova.git",
       "git_instance": "",
       "git_refspec": "stable/grizzly",
