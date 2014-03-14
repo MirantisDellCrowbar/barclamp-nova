@@ -158,6 +158,15 @@ directory "/etc/nova" do
    action :create
 end
 
+directory "/var/cache/nova/" do
+   mode 00775
+   owner node[:nova][:platform][:user]
+   action :create
+   recursive true
+   not_if { node[:platform] == "suse" }
+end
+
+
 def mask_to_bits(mask)
   octets = mask.split(".")
   count = 0
