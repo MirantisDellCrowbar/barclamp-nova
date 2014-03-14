@@ -160,7 +160,7 @@ end
 
 directory "/var/cache/nova/" do
    mode 00775
-   owner node[:nova][:platform][:user]
+   owner node[:nova][:user]
    action :create
    recursive true
    not_if { node[:platform] == "suse" }
